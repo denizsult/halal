@@ -51,5 +51,5 @@ export default function ListingsAddPage() {
     );
   }  
 
-  return <WizardForm serviceType={serviceType} appUserId={1} />;
+  return <WizardForm serviceType={serviceType as ServiceType} appUserId={1} />;
 }
