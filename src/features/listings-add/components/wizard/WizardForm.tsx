@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect,useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FormProvider } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -10,17 +10,94 @@ import { useDynamicOptions } from "../../hooks/useDynamicOptions";
 import { useListingWizard } from "../../hooks/useListingWizard";
 import { getAllSchemas } from "../../schemas";
 import { getApiService } from "../../services";
+import { getListingDraftStorageKey } from "../../draft";
 import type { ServiceType } from "../../types";
+import {
+  clearWizardUiState,
+  getCompletedSubStepIndex,
+  getSubStepIndex,
+  hasCompletedSubStepIndex,
+  hasSubStepIndex,
+  loadWizardUiState,
+  persistWizardUiState,
+  setCompletedSubStepIndex,
+  setSubStepIndex,
+  useWizardUiSnapshot,
+} from "../../state/wizard-ui.store";
 import { FieldRenderer } from "../fields/FieldRenderer";
 
 import { WizardLayout } from "./WizardLayout";
 import { WizardNavigation } from "./WizardNavigation";
+
+type DraftStickyBannerProps = {
+  visible: boolean;
+  isSubmitting: boolean;
+  onSave: () => void;
+  onDiscard: () => void;
+};
+
+const getValueByPath = (
+  values: Record<string, unknown>,
+  path: string
+): unknown =>
+  path.split(".").reduce<unknown>((acc, key) => {
+    if (acc && typeof acc === "object" && key in acc) {
+      return (acc as Record<string, unknown>)[key];
+    }
+    return undefined;
+  }, values);
+
+const DraftStickyBanner = ({
+  visible,
+  isSubmitting,
+  onSave,
+  onDiscard,
+}: DraftStickyBannerProps) => {
+  return (
+    <div
+      className={`sticky top-4 mb-4 z-20 rounded-xl border border-gray-100 bg-white/80 px-4 py-3 backdrop-blur transition-all duration-300 ${
+        visible
+          ? "translate-y-0 opacity-100"
+          : "-translate-y-4 opacity-0 pointer-events-none"
+      }`}
+      aria-hidden={!visible}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-gray-600">
+          Your progress is saved automatically.
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={onSave}
+            disabled={isSubmitting}
+          >
+            Save draft
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onDiscard}
+            disabled={isSubmitting}
+          >
+            Discard
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 interface WizardFormProps {
   serviceType: ServiceType;
   appUserId?: string | number;
   initialData?: Record<string, unknown>;
   listingId?: number | null;
+  persistKey?: string;
+  initialStep?: number;
 }
 
 export function WizardForm({
@@ -28,14 +105,23 @@ export function WizardForm({
   appUserId,
   initialData,
   listingId,
+  persistKey,
+  initialStep,
 }: WizardFormProps) {
   const navigate = useNavigate();
   const apiService = getApiService(serviceType);
+  const storageKey = getListingDraftStorageKey(persistKey);
+  const lastStepRef = useRef<number | null>(null);
+  const shouldNavigateOverviewRef = useRef(false);
+  const uiLoadedRef = useRef(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   // Initialize wizard with API submit handler
   const wizard = useListingWizard(serviceType, {
     initialData,
     listingId,
+    initialStep,
+    persistKey,
     onStepSubmit: async (_step, action, formData, entityId) => {
       if (!action) return;
       return await apiService.executeStepAction(
@@ -46,7 +132,9 @@ export function WizardForm({
       );
     },
     onComplete: () => {
-      navigate("/listings");
+      if (storageKey) {
+        clearWizardUiState(storageKey);
+      }
     },
   });
 
@@ -61,6 +149,8 @@ export function WizardForm({
     errors,
     status,
     isSubmitting,
+    saveDraft,
+    discardDraft,
     nextStep,
     prevStep,
     goToStep,
@@ -68,12 +158,38 @@ export function WizardForm({
     canGoPrev,
     isLastStep,
   } = wizard;
+  const { isDirty } = form.formState;
+  // subscribe to UI store updates once
+
+  useEffect(() => {
+    if (!storageKey) return;
+    loadWizardUiState(storageKey);
+    uiLoadedRef.current = true;
+  }, [storageKey]);
+
+  const uiSnapshot = useWizardUiSnapshot();
+  useEffect(() => {
+    if (!storageKey) return;
+    persistWizardUiState(storageKey);
+  }, [storageKey, uiSnapshot.subStepById, uiSnapshot.completedSubStepById]);
 
   useEffect(() => {
     if (initialData) {
       form.reset(initialData);
     }
   }, [form, initialData]);
+
+  useEffect(() => {
+    if (storageKey && !uiLoadedRef.current) return;
+    if (currentStepConfig.subSteps?.length) {
+      if (!hasSubStepIndex(currentStepConfig.id)) {
+        setSubStepIndex(currentStepConfig.id, 0);
+      }
+      if (!hasCompletedSubStepIndex(currentStepConfig.id)) {
+        setCompletedSubStepIndex(currentStepConfig.id, -1);
+      }
+    }
+  }, [currentStepConfig.id, currentStepConfig.subSteps?.length]);
 
   // Initialize dynamic options for dependent fields if initial data exists
   useEffect(() => {
@@ -99,56 +215,112 @@ export function WizardForm({
     () => schemas.map((schema) => schema.safeParse(formValues).success),
     [schemas, formValues]
   );
+  const currentSubSteps = currentStepConfig.subSteps ?? [];
+  const currentSubStepIndex = currentSubSteps.length
+    ? getSubStepIndex(currentStepConfig.id)
+    : 0;
+  const currentSubStepFields =
+    currentSubSteps[currentSubStepIndex]?.fields ?? [];
+  const currentSubStepIsValid = useMemo(() => {
+    if (!currentSubSteps.length || currentSubStepFields.length === 0) {
+      return true;
+    }
+    const values = formValues as Record<string, unknown>;
+    const errors = form.formState.errors as Record<string, unknown>;
+    const minLengths: Record<string, number> = {
+      "missionVision.mission": 10,
+      "missionVision.vision": 10,
+    };
+    return currentSubStepFields.every((fieldPath) => {
+      const value = getValueByPath(values, fieldPath);
+      const requiredLength =
+        typeof value === "string" ? (minLengths[fieldPath] ?? 1) : 1;
+      const hasValue =
+        value !== null &&
+        value !== undefined &&
+        (typeof value !== "string" || value.trim().length >= requiredLength);
+      const hasError = Boolean(getValueByPath(errors, fieldPath));
+      return hasValue && !hasError;
+    });
+  }, [
+    currentSubSteps.length,
+    currentSubStepFields,
+    formValues,
+    form.formState.errors,
+  ]);
+
+  useEffect(() => {
+    if (lastStepRef.current === null) {
+      lastStepRef.current = currentStep;
+      return;
+    }
+
+    if (
+      config.useOverviewBetweenSteps &&
+      shouldNavigateOverviewRef.current &&
+      currentStep > lastStepRef.current
+    ) {
+      shouldNavigateOverviewRef.current = false;
+      lastStepRef.current = currentStep;
+      setIsRedirecting(false);
+      navigate("/listings/add/overview");
+      return;
+    }
+
+    lastStepRef.current = currentStep;
+  }, [config.useOverviewBetweenSteps, currentStep, navigate]);
 
   // Success state
   if (status === "success") {
     return (
-      <WizardLayout
-        serviceType={serviceType}
-        currentStep={currentStep}
-        onStepClick={goToStep}
-        formValues={formValues}
-        formErrors={form.formState.errors}
-        stepValidation={stepValidation}
-      >
-        <div className="text-center py-16">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg
-              className="w-8 h-8 text-green-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-          </div>
-          <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-            Listing Created Successfully!
+      <div className="relative min-h-screen overflow-hidden bg-[#1D4B4A] text-white">
+        <img
+          src="/images/backgrounds/success-registration-background-carusel.svg"
+          alt=""
+          className="pointer-events-none absolute bottom-0 left-0 w-full"
+        />
+        <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-12 text-center">
+          <img
+            src="/images/logo/logo.svg"
+            alt="HalalHolidayCheck"
+            className="h-8 w-auto mb-12"
+          />
+          <img
+            src="/images/emojis/gratz.svg"
+            alt=""
+            className="h-16 w-16 mb-6"
+          />
+          <h2 className="text-2xl md:text-3xl font-semibold">
+            Your {config.displayName} Has Been Successfully Listed!
           </h2>
-          <p className="text-gray-600 mb-6">
-            Your listing has been submitted and is now pending review.
+          <p className="mt-3 max-w-xl text-sm md:text-base text-[#D1E3E2]">
+            Your property is now live and visible to travelers. Get ready to
+            receive bookings and welcome your first guests!
           </p>
-          <div className="flex items-center justify-center gap-4">
-            <button
-              onClick={() => wizard.reset()}
-              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <Link
+              to="/"
+              className="inline-flex items-center justify-center rounded-full bg-white px-6 py-3 text-sm font-semibold text-[#1D4B4A] hover:bg-gray-100"
             >
-              Create Another
-            </button>
-            <Button
-              asChild
-              className="px-6 py-3 bg-teal-600 text-white rounded-xl font-medium hover:bg-teal-700 transition-colors"
+              Back to home
+            </Link>
+            <Link
+              to="/dashboard"
+              className="inline-flex items-center justify-center rounded-full bg-[#E8B040] px-6 py-3 text-sm font-semibold text-[#1D4B4A] hover:bg-[#d9a236]"
             >
-              <Link to="/listings">View Listings</Link>
-            </Button>
+              Go to Dashboard
+            </Link>
           </div>
         </div>
-      </WizardLayout>
+      </div>
+    );
+  }
+
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-teal-500 border-t-transparent" />
+      </div>
     );
   }
 
@@ -162,6 +334,18 @@ export function WizardForm({
       stepValidation={stepValidation}
     >
       <FormProvider {...form}>
+        <DraftStickyBanner
+          visible={isDirty}
+          isSubmitting={isSubmitting}
+          onSave={saveDraft}
+          onDiscard={() => {
+            discardDraft();
+            if (storageKey) {
+              clearWizardUiState(storageKey);
+            }
+          }}
+        />
+
         <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
           {/* Step Header */}
           <div>
@@ -230,56 +414,163 @@ export function WizardForm({
           )}
 
           {/* Form Fields */}
-          <div className="grid grid-cols-2 gap-4">
-            {currentStepConfig.fields.map((field) => (
-              <div
-                key={field.name}
-                className={field.span === 2 ? "col-span-2" : "col-span-1"}
-              >
-                <FieldRenderer
-                  field={field}
-                  dynamicOptions={{
-                    brands: dynamicOptions.brands,
-                    models: dynamicOptions.models,
-                    countries: dynamicOptions.countries,
-                    cities: dynamicOptions.cities,
-                    features: dynamicOptions.features,
-                  }}
-                  onFieldChange={(name, value) => {
-                    // Handle dependent field updates
-                    if (
-                      name === "car_brand_id" ||
-                      name === "vehicle_brand_id"
-                    ) {
-                      dynamicOptions.updateSelectedBrand(
-                        value as number | null
-                      );
-                      if (name === "car_brand_id") {
-                        form.setValue("car_model_id", null);
-                      } else {
-                        form.setValue("car_model_id", null);
+          {currentStepConfig.customComponent ? (
+            <FieldRenderer
+              field={{
+                name: currentStepConfig.id,
+                label: currentStepConfig.title,
+                type: "custom",
+                customComponent: currentStepConfig.customComponent,
+                span: 2,
+              }}
+              dynamicOptions={{
+                brands: dynamicOptions.brands,
+                models: dynamicOptions.models,
+                countries: dynamicOptions.countries,
+                cities: dynamicOptions.cities,
+                features: dynamicOptions.features,
+              }}
+              onFieldChange={(name, value) => {
+                // Handle dependent field updates
+                if (name === "car_brand_id" || name === "vehicle_brand_id") {
+                  dynamicOptions.updateSelectedBrand(value as number | null);
+                  if (name === "car_brand_id") {
+                    form.setValue("car_model_id", null);
+                  } else {
+                    form.setValue("car_model_id", null);
+                  }
+                } else if (name === "country_id") {
+                  dynamicOptions.updateSelectedCountry(value as number | null);
+                  form.setValue("city_id", null);
+                }
+              }}
+            />
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {currentStepConfig.fields.map((field) => (
+                <div
+                  key={field.name}
+                  className={field.span === 2 ? "col-span-2" : "col-span-1"}
+                >
+                  <FieldRenderer
+                    field={field}
+                    dynamicOptions={{
+                      brands: dynamicOptions.brands,
+                      models: dynamicOptions.models,
+                      countries: dynamicOptions.countries,
+                      cities: dynamicOptions.cities,
+                      features: dynamicOptions.features,
+                    }}
+                    onFieldChange={(name, value) => {
+                      // Handle dependent field updates
+                      if (
+                        name === "car_brand_id" ||
+                        name === "vehicle_brand_id"
+                      ) {
+                        dynamicOptions.updateSelectedBrand(
+                          value as number | null
+                        );
+                        if (name === "car_brand_id") {
+                          form.setValue("car_model_id", null);
+                        } else {
+                          form.setValue("car_model_id", null);
+                        }
+                      } else if (name === "country_id") {
+                        dynamicOptions.updateSelectedCountry(
+                          value as number | null
+                        );
+                        form.setValue("city_id", null);
                       }
-                    } else if (name === "country_id") {
-                      dynamicOptions.updateSelectedCountry(
-                        value as number | null
-                      );
-                      form.setValue("city_id", null);
-                    }
-                  }}
-                />
-              </div>
-            ))}
-          </div>
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
 
-          {/* Navigation */}
-          <WizardNavigation
-            onPrev={prevStep}
-            onNext={nextStep}
-            canGoPrev={canGoPrev}
-            canGoNext={canGoNext}
-            isLastStep={isLastStep}
-            isSubmitting={isSubmitting}
-          />
+          {/* Sticky Navigation */}
+          <div className="sticky bottom-0 z-20 border-t border-gray-200 bg-white/90 px-2 py-4 backdrop-blur">
+            <WizardNavigation
+              onPrev={async () => {
+                if (currentSubSteps.length > 0) {
+                  if (currentSubStepIndex > 0) {
+                    setSubStepIndex(
+                      currentStepConfig.id,
+                      currentSubStepIndex - 1
+                    );
+                    return;
+                  }
+                }
+                prevStep();
+              }}
+              onNext={async () => {
+                if (currentSubSteps.length > 0) {
+                  const fieldsToValidate = currentSubStepFields;
+                  if (fieldsToValidate.length > 0) {
+                    const values = form.getValues();
+                    let isValid = true;
+                    const minLengths: Record<string, number> = {
+                      "missionVision.mission": 10,
+                      "missionVision.vision": 10,
+                    };
+                    fieldsToValidate.forEach((fieldPath) => {
+                      const value = getValueByPath(
+                        values as Record<string, unknown>,
+                        fieldPath
+                      );
+                      const requiredLength =
+                        typeof value === "string"
+                          ? (minLengths[fieldPath] ?? 1)
+                          : 1;
+                      const hasValue =
+                        value !== null &&
+                        value !== undefined &&
+                        (typeof value !== "string" ||
+                          value.trim().length >= requiredLength);
+                      if (!hasValue) {
+                        isValid = false;
+                        form.setError(fieldPath as never, {
+                          type: "manual",
+                          message:
+                            requiredLength > 1
+                              ? `Minimum ${requiredLength} characters required`
+                              : "This field is required",
+                        });
+                      } else {
+                        form.clearErrors(fieldPath as never);
+                      }
+                    });
+                    if (!isValid) return;
+                  }
+                  setCompletedSubStepIndex(
+                    currentStepConfig.id,
+                    Math.max(
+                      getCompletedSubStepIndex(currentStepConfig.id),
+                      currentSubStepIndex
+                    )
+                  );
+                  if (currentSubStepIndex < currentSubSteps.length - 1) {
+                    setSubStepIndex(
+                      currentStepConfig.id,
+                      currentSubStepIndex + 1
+                    );
+                    return;
+                  }
+                }
+                if (config.useOverviewBetweenSteps && !isLastStep) {
+                  shouldNavigateOverviewRef.current = true;
+                  setIsRedirecting(true);
+                }
+                await nextStep();
+              }}
+              canGoPrev={
+                currentSubSteps.length > 0 ? currentSubStepIndex > 0 : canGoPrev
+              }
+              canGoNext={canGoNext && currentSubStepIsValid}
+              isLastStep={isLastStep}
+              isSubmitting={isSubmitting}
+            />
+          </div>
         </form>
       </FormProvider>
     </WizardLayout>

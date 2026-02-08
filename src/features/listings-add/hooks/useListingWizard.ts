@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useMemo,useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { UseFormReturn } from "react-hook-form";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
 import { getListingConfig } from "../config";
+import { getListingDraftStorageKey } from "../draft";
 import { getValidationSchema } from "../schemas";
 import type {
   FormStep,
@@ -37,6 +38,8 @@ export interface UseListingWizardReturn {
   prevStep: () => void;
   goToStep: (step: number) => void;
   reset: () => void;
+  saveDraft: () => void;
+  discardDraft: () => void;
   setEntityId: (id: number) => void;
   setErrors: (errors: string[]) => void;
   clearErrors: () => void;
@@ -51,6 +54,8 @@ export interface UseListingWizardReturn {
 interface UseListingWizardOptions {
   listingId?: number | null;
   initialData?: Record<string, unknown>;
+  initialStep?: number;
+  persistKey?: string;
   onStepSubmit?: (
     step: number,
     action: string | undefined,
@@ -65,17 +70,26 @@ export function useListingWizard(
   options: UseListingWizardOptions = {}
 ): UseListingWizardReturn {
   const { onStepSubmit, onComplete } = options;
+  const storageKey = getListingDraftStorageKey(options.persistKey);
+  const isRestoringRef = useRef(false);
+  const wizardStateRef = useRef<WizardState>({
+    currentStep: options.initialStep ?? 0,
+    status: "idle",
+    entityId: options.listingId || null,
+    errors: [],
+  });
 
   // Get config for this service type
   const config = useMemo(() => getListingConfig(serviceType), [serviceType]);
 
   // Wizard state
   const [wizardState, setWizardState] = useState<WizardState>({
-    currentStep: 0,
+    currentStep: options.initialStep ?? 0,
     status: "idle",
     entityId: options.listingId || null,
     errors: [],
   });
+  wizardStateRef.current = wizardState;
 
   // Current step configuration
   const currentStepConfig = config.steps[wizardState.currentStep];
@@ -93,6 +107,66 @@ export function useListingWizard(
     mode: "onChange",
     defaultValues: options.initialData || {},
   });
+
+  useEffect(() => {
+    if (!storageKey) return;
+    const stored = localStorage.getItem(storageKey);
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as {
+        values?: Record<string, unknown>;
+        currentStep?: number;
+        entityId?: number | null;
+      };
+      isRestoringRef.current = true;
+      if (!options.initialData && parsed.values) {
+        form.reset(parsed.values);
+      }
+      if (typeof parsed.currentStep === "number") {
+        setWizardState((s) => ({
+          ...s,
+          currentStep:
+            typeof options.initialStep === "number"
+              ? options.initialStep
+              : (parsed.currentStep ?? 0),
+          entityId: parsed.entityId ?? s.entityId,
+        }));
+      }
+    } catch {
+      localStorage.removeItem(storageKey);
+    } finally {
+      isRestoringRef.current = false;
+    }
+  }, [form, options.initialData, storageKey]);
+
+  const persistState = useCallback(
+    (values?: Record<string, unknown>) => {
+      if (!storageKey || isRestoringRef.current) return;
+      const state = wizardStateRef.current;
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          values: values ?? form.getValues(),
+          currentStep: state.currentStep,
+          entityId: state.entityId,
+        })
+      );
+    },
+    [form, storageKey]
+  );
+
+  useEffect(() => {
+    if (!storageKey) return;
+    const subscription = form.watch((values) => {
+      persistState(values as Record<string, unknown>);
+    });
+    return () => subscription.unsubscribe();
+  }, [form, persistState, storageKey]);
+
+  useEffect(() => {
+    if (!storageKey) return;
+    persistState();
+  }, [persistState, storageKey, wizardState.currentStep, wizardState.entityId]);
 
   // Set entity ID (e.g., after creation)
   const setEntityId = useCallback((id: number) => {
@@ -158,18 +232,23 @@ export function useListingWizard(
         }));
       } else {
         setWizardState((s) => ({ ...s, status: "success" }));
+        if (storageKey) {
+          localStorage.removeItem(storageKey);
+        }
         onComplete?.(wizardState.entityId);
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "An error occurred";
+      const fallbackMessage =
+        currentStepConfig.toast?.error ||
+        "Something went wrong. Please try again.";
+      console.error("Listing wizard submit failed:", error);
       if (currentStepConfig.submitAction && currentStepConfig.toast?.error) {
         toast.error(currentStepConfig.toast.error);
       }
       setWizardState((s) => ({
         ...s,
         status: "error",
-        errors: [errorMessage],
+        errors: [fallbackMessage],
       }));
     }
   }, [
@@ -194,14 +273,10 @@ export function useListingWizard(
     }
   }, [wizardState.currentStep]);
 
-  // Navigate to specific step (only backwards allowed)
+  // Navigate to specific step
   const goToStep = useCallback(
     (step: number) => {
-      if (
-        step >= 0 &&
-        step < config.steps.length &&
-        step <= wizardState.currentStep
-      ) {
+      if (step >= 0 && step < config.steps.length) {
         setWizardState((s) => ({
           ...s,
           currentStep: step,
@@ -222,7 +297,21 @@ export function useListingWizard(
       entityId: null,
       errors: [],
     });
-  }, [form]);
+    if (storageKey) {
+      localStorage.removeItem(storageKey);
+    }
+  }, [form, storageKey]);
+
+  const saveDraft = useCallback(() => {
+    if (!storageKey) return;
+    persistState();
+    toast.success("Draft saved.");
+  }, [persistState, storageKey]);
+
+  const discardDraft = useCallback(() => {
+    reset();
+    toast.success("Draft discarded.");
+  }, [reset]);
 
   return {
     // Configuration
@@ -245,6 +334,8 @@ export function useListingWizard(
     prevStep,
     goToStep,
     reset,
+    saveDraft,
+    discardDraft,
     setEntityId,
     setErrors,
     clearErrors,

@@ -1,10 +1,10 @@
 "use client";
 
 import type { ComponentType } from "react";
-import { lazy,Suspense } from "react";
+import { lazy, Suspense } from "react";
 import { Controller, useFormContext } from "react-hook-form";
 
-import type { DynamicOptionKey,FieldOption, FormField } from "../../types";
+import type { DynamicOptionKey, FieldOption, FormField } from "../../types";
 
 import { CheckboxField } from "./CheckboxField";
 import { FileField } from "./FileField";
@@ -21,6 +21,21 @@ const customComponentRegistry: Record<string, ComponentType<any>> = {
   CarCalendar: lazy(() => import("../custom/car/CalendarStep")),
   CarTerms: lazy(() => import("../custom/car/TermsStep")),
   HospitalMedia: lazy(() => import("../custom/hospital/MediaStep")),
+  HospitalLocations: lazy(() => import("../custom/hospital/LocationsStep")),
+  HospitalMissionVision: lazy(
+    () => import("../custom/hospital/MissionVisionStep")
+  ),
+  HospitalStatistics: lazy(() => import("../custom/hospital/StatisticsStep")),
+  HospitalCertificates: lazy(
+    () => import("../custom/hospital/CertificatesStep")
+  ),
+  HospitalAwards: lazy(() => import("../custom/hospital/AwardsStep")),
+  HospitalDetails: lazy(() => import("../custom/hospital/HospitalDetailsStep")),
+  HospitalDoctors: lazy(() => import("../custom/hospital/DoctorsStep")),
+  HospitalServices: lazy(() => import("../custom/hospital/ServicesStep")),
+  TransferBranches: lazy(() => import("../custom/transfer/BranchesStep")),
+  TransferExpertises: lazy(() => import("../custom/transfer/ExpertisesStep")),
+  TransferPricing: lazy(() => import("../custom/transfer/PricingStep")),
 };
 
 interface FieldRendererProps {

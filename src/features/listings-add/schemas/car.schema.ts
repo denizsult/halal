@@ -22,7 +22,18 @@ export const carDetailsSchema = z.object({
   about: z.string().optional(),
   feature_ids: z.array(z.number()).optional(),
   is_professional_owner: z.boolean(),
-  location_id: z.number().min(1, "Check-in location is required"),
+  location_id: z
+    .object({
+      place_id: z.string(),
+      name: z.string(),
+      formatted_address: z.string(),
+      latitude: z.number(),
+      longitude: z.number(),
+    })
+    .nullable()
+    .refine((val) => val !== null, {
+      message: "Check-in location is required",
+    }),
 });
 
 // Step 2: Pricing Schema

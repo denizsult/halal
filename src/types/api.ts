@@ -31,6 +31,16 @@ export interface RegisterRequest {
   tax_number?: string;
 }
 
+export interface UserRegisterRequest {
+  name: string;
+  surname: string;
+  email: string;
+  phone: string;
+  password: string;
+  password_confirmation: string;
+  date_of_birth: string;
+}
+
 export type CompanyType =
   | "rent_a_car"
   | "hospital"
@@ -90,6 +100,7 @@ export interface UserResource {
   name: string;
   email: string;
   phone?: string;
+  profile_photo_url?: string | null;
   email_verified_at: string | null;
   is_active: boolean;
   company: CompanyResource;
@@ -101,7 +112,7 @@ export interface CompanyResource {
   id: number;
   name: string;
   slug: string;
-  type: string;
+  type: CompanyType;
   type_label: string;
   logo_url: string | null;
   phone?: string;
@@ -110,9 +121,50 @@ export interface CompanyResource {
   city?: string;
   country?: string;
   tax_number?: string;
+  about?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+// --- Profile ---
+export interface UpdateProfileRequest {
+  name?: string;
+  email?: string;
+  phone?: string;
+}
+
+export interface UpdateCompanyRequest {
+  name?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  tax_number?: string;
+  about?: string;
+}
+
+export interface NotificationSettings {
+  email_notifications: boolean;
+  push_notifications: boolean;
+  marketing_emails: boolean;
+  booking_updates: boolean;
+}
+
+// --- Locations ---
+export interface LocationPrediction {
+  place_id: string;
+  description: string;
+  main_text: string;
+  secondary_text: string;
+}
+
+export interface PlaceDetails {
+  name: string;
+  formatted_address: string;
+  latitude: number;
+  longitude: number;
 }
 
 // --- Commons ---

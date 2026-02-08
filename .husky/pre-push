@@ -1,0 +1,5 @@
+# echo "🔍 Running TypeScript type check..."
+# npm run type-check || exit 1
+
+# echo "✨ Running Prettier check..."
+# npm run format:check || exit 1

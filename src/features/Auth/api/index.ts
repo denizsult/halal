@@ -7,3 +7,4 @@ export * from "./useLogoutAll";
 export * from "./useRegister";
 export * from "./useResetPassword";
 export * from "./useUser";
+export * from "./useUserRegister";

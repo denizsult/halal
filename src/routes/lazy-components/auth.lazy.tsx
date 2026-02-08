@@ -34,3 +34,10 @@ export const CompanyPasswordLazy = lazy(
       default: module.CompanyPasswordPage,
     })) as Promise<{ default: React.ComponentType<unknown> }>
 );
+
+export const UserSignUpLazy = lazy(
+  () =>
+    import("@/features/Auth/pages/user-sign-up").then((module) => ({
+      default: module.UserSignUpPage,
+    })) as Promise<{ default: React.ComponentType<unknown> }>
+);

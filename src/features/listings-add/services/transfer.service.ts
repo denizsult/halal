@@ -134,6 +134,16 @@ async function uploadTransferMedia(
   await Promise.all(uploadPromises);
 }
 
+async function updateTransferInformations(
+  transferId: number,
+  formData: Record<string, unknown>
+): Promise<void> {
+  await api.put(
+    resolveEndpoint(API_BASE.updateInformations!, transferId),
+    formData
+  );
+}
+
 async function updateTransferExtras(
   transferId: number,
   formData: Record<string, unknown>
@@ -224,6 +234,12 @@ export const transferApiService: ListingApiService = {
         if (!entityId)
           throw new Error("Transfer ID is required for media upload");
         await uploadTransferMedia(entityId, formData);
+        return;
+
+      case "updateInformations":
+        if (!entityId)
+          throw new Error("Transfer ID is required for informations update");
+        await updateTransferInformations(entityId, formData);
         return;
 
       case "updateExtras":

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Navigate,Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import { Toaster } from "@/components/ui/sonner";
 

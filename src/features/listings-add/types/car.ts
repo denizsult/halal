@@ -46,7 +46,13 @@ export interface CarFormData extends BaseFormData {
   about: string;
   feature_ids: number[];
   is_professional_owner: boolean | null;
-  location_id: number | null;
+  location_id: {
+    place_id: string;
+    name: string;
+    formatted_address: string;
+    latitude: number;
+    longitude: number;
+  } | null;
 
   // Step 2: Pricing
   pricing: CarPricing;
@@ -113,7 +119,8 @@ export interface CreateCarDTO {
   number_of_luggage: number;
   is_professional_owner: boolean;
   feature_ids: number[];
-  rent_car_location_id: number;
+  latitude: number;
+  longitude: number;
   about: string;
 }
 

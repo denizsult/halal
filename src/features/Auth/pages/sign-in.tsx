@@ -1,5 +1,5 @@
 import { useForm } from "react-hook-form";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,12 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { setTokens } from "@/lib/axios";
+import { authActions } from "@/stores/auth.store";
+import type { User } from "@/types/auth";
 
 import { useLogin } from "../api";
-import { type SignInFormData,signInSchema } from "../schemas";
+import { type SignInFormData, signInSchema } from "../schemas";
 import type { AccountType } from "../types";
 
 type SignInFormProps = {
@@ -26,6 +29,7 @@ export function SignInPage({ accountType }: SignInFormProps) {
     onSuccessMessage: "Login successful",
     onErrorMessage: "Login failed",
   });
+  const navigate = useNavigate();
 
   const form = useForm<SignInFormData>({
     resolver: zodResolver(signInSchema),
@@ -42,6 +46,31 @@ export function SignInPage({ accountType }: SignInFormProps) {
       password: data.password,
       remember: data.remember,
     });
+
+  const handleUseDemo = () => {
+    const demoUser: User = {
+      id: 1,
+      name: "Demo User",
+      email: "demo@example.com",
+      phone: "000",
+      email_verified_at: null,
+      is_active: true,
+      company: {
+        id: 10,
+        name: "Demo Hospital",
+        slug: "demo-hospital",
+        type: "hospital",
+        type_label: "Hospital",
+        logo_url: null,
+      },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    setTokens("dev-access-token", "dev-refresh-token");
+    authActions.setUser(demoUser);
+    navigate("/dashboard");
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-start md:gap-[40px] md:flex-row">
@@ -162,6 +191,17 @@ export function SignInPage({ accountType }: SignInFormProps) {
                     Log in
                   </Button>
                 </div>
+                {import.meta.env.DEV ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full"
+                    size="sm"
+                    onClick={handleUseDemo}
+                  >
+                    Use demo account
+                  </Button>
+                ) : null}
 
                 {/* Footer */}
                 <div className="w-full text-center mt-6">

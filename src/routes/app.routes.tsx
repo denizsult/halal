@@ -4,6 +4,7 @@ import {
   BillingsPageLazy,
   CustomersPageLazy,
   DashboardPageLazy,
+  ListingsAddOverviewPageLazy,
   ListingsAddPageLazy,
   ListingsEditPageLazy,
   ListingsPageLazy,
@@ -17,10 +18,10 @@ export const appRoutes: RouteObject[] = [
   { path: "/customers", element: <CustomersPageLazy /> },
   { path: "/billings", element: <BillingsPageLazy /> },
   { path: "/profile", element: <ProfilePageLazy /> },
-  { path: "/profile/details", element: <ProfilePageLazy /> },
 ];
 
 export const appRoutesWithLayout: RouteObject[] = [
   { path: "/listings/add", element: <ListingsAddPageLazy /> },
+  { path: "/listings/add/overview", element: <ListingsAddOverviewPageLazy /> },
   { path: "/listings/edit/:id", element: <ListingsEditPageLazy /> },
 ];

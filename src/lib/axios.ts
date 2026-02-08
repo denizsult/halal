@@ -1,7 +1,13 @@
-import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
+import axios, {
+  type AxiosAdapter,
+  type AxiosError,
+  type InternalAxiosRequestConfig,
+} from "axios";
+
+import { createMockAdapter } from "@/mocks/api-mocks";
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:8000/api";
+  import.meta.env.VITE_API_BASE_URL || "http://localhost/api";
 
 // Token storage keys
 const ACCESS_TOKEN_KEY = "accessToken";
@@ -24,6 +30,9 @@ export const clearTokens = (): void => {
   localStorage.removeItem("user");
 };
 
+const isMockEnabled =
+  import.meta.env.DEV && import.meta.env.VITE_ENABLE_API_MOCKS !== "false";
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -31,6 +40,19 @@ const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+if (isMockEnabled) {
+  const defaultAdapter = axios.defaults.adapter;
+  const fallbackAdapter = Array.isArray(defaultAdapter)
+    ? axios.getAdapter(defaultAdapter)
+    : (defaultAdapter as AxiosAdapter | undefined);
+
+  if (typeof fallbackAdapter === "function") {
+    api.defaults.adapter = createMockAdapter(fallbackAdapter);
+  } else {
+    console.warn("Axios mock adapter disabled: no valid adapter found.");
+  }
+}
 
 // Request queue for handling concurrent requests during token refresh
 let isRefreshing = false;

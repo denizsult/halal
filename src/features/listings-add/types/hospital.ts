@@ -2,35 +2,116 @@ import type { BaseFormData } from "./base";
 
 // Complete hospital form data
 export interface HospitalFormData extends BaseFormData {
-  // Step 1: Basic Information
-  name: string;
-  description: string;
+  // Step 1: Locations
+  locations: {
+    headquartersName: string;
+    headquartersAddress: string;
+    branches: {
+      name: string;
+      address: string;
+      isTemporarilyClosed?: boolean;
+    }[];
+  };
 
   // Step 2: Mission & Vision
-  mission: string;
-  vision: string;
+  missionVision: {
+    mission: string;
+    vision: string;
+  };
 
-  // Step 3: Media
-  logo: File | null;
-  cover: File | null;
+  // Step 3: Statistics
+  statistics: {
+    statistics: {
+      title: string;
+      value: string;
+    }[];
+  };
 
-  // Step 4: Contact Information
-  address: string;
-  phone: string;
-  email: string;
+  // Step 4: Certificates
+  certificates: {
+    certificates: {
+      title: string;
+      file?: File | null;
+    }[];
+  };
+
+  // Step 5: Awards
+  awards: {
+    awards: {
+      title: string;
+      file?: File | null;
+    }[];
+  };
+
+  // Step 6: Media
+  media: {
+    photos?: File[] | null;
+  };
+
+  // Step 2: Doctors
+  doctors: {
+    doctors: {
+      title: string;
+      fullName: string;
+      rating: string;
+      about: string;
+      expertise: string[];
+      statistics: {
+        title: string;
+        value: string;
+      }[];
+      photo?: File | null;
+      license?: File | null;
+      certificates?: File[] | null;
+    }[];
+  };
+
+  // Step 3: Services
+  services: {
+    services: {
+      title: string;
+      about: string;
+      symptoms: string[];
+      doctors: string[];
+      statistics: {
+        title: string;
+        value: string;
+      }[];
+      photo?: File | null;
+      cover?: File | null;
+    }[];
+  };
 }
 
 // Initial hospital form data
 export const initialHospitalFormData: HospitalFormData = {
-  name: "",
-  description: "",
-  mission: "",
-  vision: "",
-  logo: null,
-  cover: null,
-  address: "",
-  phone: "",
-  email: "",
+  locations: {
+    headquartersName: "",
+    headquartersAddress: "",
+    branches: [],
+  },
+  missionVision: {
+    mission: "",
+    vision: "",
+  },
+  statistics: {
+    statistics: [],
+  },
+  certificates: {
+    certificates: [],
+  },
+  awards: {
+    awards: [],
+  },
+  media: {
+    photos: [],
+  },
+  doctors: {
+    doctors: [],
+  },
+  services: {
+    services: [],
+  },
 };
 
 // API DTOs
@@ -51,6 +132,5 @@ export interface UpdateHospitalDTO {
 
 export interface HospitalMediaDTO {
   id: number;
-  logo?: File;
-  cover?: File;
+  photos?: File[];
 }

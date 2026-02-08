@@ -129,7 +129,7 @@ export const rentacarListingsTableColumns: ColumnDef<RentACarListingRow>[] = [
             </div>
           )}
           <div className="flex flex-col min-w-0">
-            <span className="font-medium text-sm text-gray-900 truncate">
+            <span className="font-medium text-sm text-gray-900 truncate max-w-[200px]">
               {fullName}
             </span>
             {about ? (

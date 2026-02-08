@@ -18,7 +18,7 @@ export function WizardNavigation({
   isSubmitting,
 }: WizardNavigationProps) {
   return (
-    <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+    <div className="flex items-center justify-between">
       {/* Back Button */}
       <button
         type="button"

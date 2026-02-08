@@ -18,6 +18,12 @@ export const ListingsAddPageLazy = lazy(() =>
   }))
 );
 
+export const ListingsAddOverviewPageLazy = lazy(() =>
+  import("@/features/listings-add").then((m) => ({
+    default: m.ListingsAddOverviewPage,
+  }))
+);
+
 export const ListingsEditPageLazy = lazy(() =>
   import("@/features/listings-edit").then((m) => ({
     default: m.ListingsEditPage,

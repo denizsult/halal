@@ -1,14 +1,15 @@
-import { Bell, Menu, Search,Settings } from "lucide-react";
+import { Menu, Settings } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useSidebar } from "@/providers/SidebarContext";
 
+import { NotificationPopover } from "./NotificationPopover";
 import UserDropdown from "./UserDropdown";
+import { useNavigate } from "react-router-dom";
 
 export default function AppHeader() {
   const { toggleSidebar, toggleMobileSidebar } = useSidebar();
-
+  const navigate = useNavigate();
   const handleToggle = () => {
     if (window.innerWidth >= 1024) {
       toggleSidebar();
@@ -29,29 +30,19 @@ export default function AppHeader() {
         >
           <Menu className="h-5 w-5" />
         </Button>
-
-        <div className="hidden md:flex relative w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <Input placeholder="Search..." type="text" className="pl-9" />
-        </div>
       </div>
 
       <div className="flex items-center gap-2">
         <Button
           variant="ghost"
           size="icon"
+          onClick={() => navigate("/profile")}
           className="rounded-xl bg-gray-50 hover:bg-gray-100"
         >
           <Settings className="h-5 w-5 text-gray-600" />
         </Button>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          className="rounded-xl bg-gray-50 hover:bg-gray-100"
-        >
-          <Bell className="h-5 w-5 text-gray-600" />
-        </Button>
+        <NotificationPopover />
 
         <UserDropdown />
       </div>
