@@ -7,7 +7,6 @@ import type {
   CompanyResource,
   LoginRequest,
   RegisterRequest,
-  RegisterRequest,
   UserRegisterRequest,
   UserResource,
 } from "./api";
