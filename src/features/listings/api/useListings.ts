@@ -58,11 +58,10 @@ const getListingsEndpoint = (
 export const getListings = async <T = unknown>(
   companyType: CompanyType | undefined,
   params?: ListingsParams,
-  view: ListingsView = "listings",
-  signal?: AbortSignal
+  view: ListingsView = "listings"
 ): Promise<ListingCollection<T>> => {
   const url = getListingsEndpoint(companyType, view);
-  const response = await api.get<ListingCollection<T>>(url, { params, signal });
+  const response = await api.get<ListingCollection<T>>(url, { params });
   return response.data;
 };
 
@@ -86,9 +85,7 @@ export const useListings = <T = unknown>({
 
   return useQuery({
     queryKey,
-    refetchOnMount: true,
-    refetchOnWindowFocus: true,
-    queryFn: ({ signal }) => getListings<T>(companyType, params, view, signal),
+    queryFn: () => getListings<T>(companyType, params, view),
     enabled: !!companyType && !!config,
     ...options,
   });

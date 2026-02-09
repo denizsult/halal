@@ -42,20 +42,11 @@ const extractId = (response: unknown): number | null => {
 function toCreateHospitalDTO(
   formData: Record<string, unknown>
 ): CreateHospitalDTO {
-  const locations = formData.locations as
-    | {
-        headquartersName?: string;
-        headquartersAddress?: string;
-      }
-    | undefined;
-  const missionVision = formData.missionVision as
-    | { mission?: string; vision?: string }
-    | undefined;
   return {
-    name: (locations?.headquartersName as string) ?? "",
-    description: (locations?.headquartersAddress as string) ?? "",
-    mission: (missionVision?.mission as string) ?? "",
-    vision: (missionVision?.vision as string) ?? "",
+    name: formData.name as string,
+    description: formData.description as string,
+    mission: formData.mission as string,
+    vision: formData.vision as string,
   };
 }
 
@@ -63,21 +54,12 @@ function toUpdateHospitalDTO(
   id: number,
   formData: Record<string, unknown>
 ): UpdateHospitalDTO {
-  const locations = formData.locations as
-    | {
-        headquartersName?: string;
-        headquartersAddress?: string;
-      }
-    | undefined;
-  const missionVision = formData.missionVision as
-    | { mission?: string; vision?: string }
-    | undefined;
   return {
     id,
-    name: locations?.headquartersName,
-    description: locations?.headquartersAddress,
-    mission: missionVision?.mission,
-    vision: missionVision?.vision,
+    name: formData.name as string | undefined,
+    description: formData.description as string | undefined,
+    mission: formData.mission as string | undefined,
+    vision: formData.vision as string | undefined,
   };
 }
 
@@ -90,27 +72,10 @@ export const hospitalApiService = {
     const data = response.data.data;
     // Basic transform, can be expanded as needed
     return {
-      locations: {
-        headquartersName: data.name ?? "",
-        headquartersAddress: data.description ?? "",
-        branches: [],
-      },
-      missionVision: {
-        mission: data.mission ?? "",
-        vision: data.vision ?? "",
-      },
-      statistics: {
-        statistics: [],
-      },
-      certificates: {
-        certificates: [],
-      },
-      awards: {
-        awards: [],
-      },
-      media: {
-        photos: [],
-      },
+      name: data.name,
+      description: data.description,
+      mission: data.mission,
+      vision: data.vision,
     };
   },
 
@@ -134,17 +99,25 @@ export const hospitalApiService = {
     });
   },
 
-  // Upload hospital media (photos)
-  async uploadMedia(hospitalId: number, photos?: File[] | null): Promise<void> {
-    if (!photos || photos.length === 0) {
-      return;
+  // Upload hospital media (logo and cover)
+  async uploadMedia(
+    hospitalId: number,
+    logo?: File | null,
+    cover?: File | null
+  ): Promise<void> {
+    if (!logo && !cover) {
+      return; // Nothing to upload
     }
 
     const formData = new FormData();
     formData.append("id", hospitalId.toString());
-    photos.forEach((photo) => {
-      formData.append("photos[]", photo);
-    });
+
+    if (logo) {
+      formData.append("logo", logo);
+    }
+    if (cover) {
+      formData.append("cover", cover);
+    }
 
     await api.post(API_BASE.uploadMedia!, formData, {
       headers: {
@@ -178,9 +151,9 @@ export const hospitalApiService = {
       case "uploadMedia": {
         if (!entityId)
           throw new Error("Hospital ID is required for uploading media");
-        const media = formData.media as { photos?: File[] | null } | undefined;
-        const photos = media?.photos ?? null;
-        await this.uploadMedia(entityId, photos);
+        const logo = formData.logo as File | null;
+        const cover = formData.cover as File | null;
+        await this.uploadMedia(entityId, logo, cover);
         break;
       }
 

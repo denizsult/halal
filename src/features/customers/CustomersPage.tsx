@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo,useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Ban, Eye, MoreHorizontal } from "lucide-react";
+import { Ban,Eye, MoreHorizontal } from "lucide-react";
 
 import { DataTable } from "@/components/datatable/DataTable";
 import { StatsBlock } from "@/components/stats-block";

@@ -1,15 +1,11 @@
 "use client";
 
 import { useAuthStore } from "@/stores";
-
 import { WizardForm } from "./components/wizard";
-import { getListingDraftPersistKey } from "./draft";
 import { isListingServiceType, type ServiceType } from "./types";
-import { useLocation } from "react-router-dom";
 
 export default function ListingsAddPage() {
-  const { user } = useAuthStore();
-  const location = useLocation();
+      const { user } = useAuthStore();
 
   if (!user) {
     return (
@@ -22,7 +18,7 @@ export default function ListingsAddPage() {
     );
   }
 
-  const serviceType = user.company?.type ?? "rent_a_car";
+  const serviceType = user.company?.type ?? 'rent_a_car';
 
   if (!isListingServiceType(serviceType as ServiceType)) {
     return (
@@ -53,25 +49,7 @@ export default function ListingsAddPage() {
         </div>
       </div>
     );
-  }
+  }  
 
-  const stateStep =
-    typeof location.state === "object" &&
-    location.state &&
-    "step" in (location.state as Record<string, unknown>)
-      ? (location.state as Record<string, unknown>).step
-      : undefined;
-  const parsedStep =
-    typeof stateStep === "number" && Number.isFinite(stateStep)
-      ? stateStep
-      : undefined;
-
-  return (
-    <WizardForm
-      serviceType={serviceType as ServiceType}
-      appUserId={user.id}
-      persistKey={getListingDraftPersistKey(serviceType as ServiceType)}
-      initialStep={parsedStep}
-    />
-  );
+  return <WizardForm serviceType={serviceType as ServiceType} appUserId={1} />;
 }

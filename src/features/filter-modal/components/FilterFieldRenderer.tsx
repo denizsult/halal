@@ -15,10 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type {
-  DynamicOptionKey,
-  FieldOption,
-} from "@/features/listings-add/types";
+import type { DynamicOptionKey, FieldOption } from "@/features/listings-add/types";
 
 import type { FilterCustomComponent, FilterField } from "../types";
 
@@ -42,10 +39,7 @@ type CustomComponentRenderer = (props: {
   isDependentDisabled: boolean;
 }) => React.ReactNode;
 
-const customComponentRegistry: Record<
-  FilterCustomComponent,
-  CustomComponentRenderer
-> = {
+const customComponentRegistry: Record<FilterCustomComponent, CustomComponentRenderer> = {
   BrandSelect: ({ field, control, onFieldChange }) => (
     <Controller
       name={field.name}
@@ -63,13 +57,7 @@ const customComponentRegistry: Record<
       )}
     />
   ),
-  ModelSelect: ({
-    field,
-    control,
-    watch,
-    onFieldChange,
-    isDependentDisabled,
-  }) => (
+  ModelSelect: ({ field, control, watch, onFieldChange, isDependentDisabled }) => (
     <Controller
       name={field.name}
       control={control}
@@ -105,13 +93,7 @@ const customComponentRegistry: Record<
       )}
     />
   ),
-  CitySelect: ({
-    field,
-    control,
-    watch,
-    onFieldChange,
-    isDependentDisabled,
-  }) => (
+  CitySelect: ({ field, control, watch, onFieldChange, isDependentDisabled }) => (
     <Controller
       name={field.name}
       control={control}
@@ -144,17 +126,7 @@ export function FilterFieldRenderer({
   if (field.type === "custom" && field.customComponent) {
     const renderer = customComponentRegistry[field.customComponent];
     if (renderer) {
-      return (
-        <>
-          {renderer({
-            field,
-            control,
-            watch,
-            onFieldChange,
-            isDependentDisabled,
-          })}
-        </>
-      );
+      return <>{renderer({ field, control, watch, onFieldChange, isDependentDisabled })}</>;
     }
     console.warn(`Unknown custom component: ${field.customComponent}`);
   }
@@ -168,14 +140,12 @@ export function FilterFieldRenderer({
     case "select":
       return (
         <div className="space-y-2">
-          {!field.hideLabel ? (
-            <Label
-              htmlFor={field.name}
-              className="text-sm font-medium text-gray-900"
-            >
-              {field.label}
-            </Label>
-          ) : null}
+          <Label
+            htmlFor={field.name}
+            className="text-sm font-medium text-gray-900"
+          >
+            {field.label}
+          </Label>
           <Controller
             name={field.name}
             control={control}
@@ -183,12 +153,7 @@ export function FilterFieldRenderer({
               <Select
                 value={formField.value?.toString() ?? ""}
                 onValueChange={(value) => {
-                  const parsedValue =
-                    value === ""
-                      ? null
-                      : isNaN(Number(value))
-                        ? value
-                        : Number(value);
+                  const parsedValue = value === "" ? null : isNaN(Number(value)) ? value : Number(value);
                   formField.onChange(parsedValue);
                   onFieldChange?.(field.name, parsedValue);
                 }}
@@ -243,8 +208,6 @@ export function FilterFieldRenderer({
           name={field.name}
           label={field.label}
           placeholder={field.placeholder}
-          presets={field.presets}
-          presetField={field.presetField}
         />
       );
 
@@ -258,20 +221,17 @@ export function FilterFieldRenderer({
       );
 
     case "text":
-    case "time":
       return (
         <div className="space-y-2">
-          {!field.hideLabel ? (
-            <Label
-              htmlFor={field.name}
-              className="text-sm font-medium text-gray-900"
-            >
-              {field.label}
-            </Label>
-          ) : null}
+          <Label
+            htmlFor={field.name}
+            className="text-sm font-medium text-gray-900"
+          >
+            {field.label}
+          </Label>
           <Input
             id={field.name}
-            type={field.type === "time" ? "time" : "text"}
+            type="text"
             placeholder={field.placeholder}
             {...register(field.name)}
             className="w-full bg-white text-gray-900 border-gray-200 rounded-xl placeholder:text-gray-400 focus-visible:border-brand-300 focus-visible:ring-brand-100 transition-all ease-in"
@@ -285,14 +245,12 @@ export function FilterFieldRenderer({
     case "number":
       return (
         <div className="space-y-2">
-          {!field.hideLabel ? (
-            <Label
-              htmlFor={field.name}
-              className="text-sm font-medium text-gray-900"
-            >
-              {field.label}
-            </Label>
-          ) : null}
+          <Label
+            htmlFor={field.name}
+            className="text-sm font-medium text-gray-900"
+          >
+            {field.label}
+          </Label>
           <Input
             id={field.name}
             type="number"
@@ -310,14 +268,12 @@ export function FilterFieldRenderer({
       console.warn(`Unknown filter field type: ${field.type}`);
       return (
         <div className="space-y-2">
-          {!field.hideLabel ? (
-            <Label
-              htmlFor={field.name}
-              className="text-sm font-medium text-gray-900"
-            >
-              {field.label}
-            </Label>
-          ) : null}
+          <Label
+            htmlFor={field.name}
+            className="text-sm font-medium text-gray-900"
+          >
+            {field.label}
+          </Label>
           <Input
             id={field.name}
             type="text"

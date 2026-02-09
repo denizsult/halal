@@ -1,4 +1,4 @@
-import type { ListingConfig, ServiceType } from "../types";
+import type { ListingConfig,ServiceType } from "../types";
 
 import { carConfig } from "./car.config";
 import { hospitalConfig } from "./hospital.config";

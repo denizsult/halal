@@ -66,11 +66,6 @@ const toDateOnly = (value: unknown): string | null => {
 
 // Transform form data to API DTOs
 function toCreateCarDTO(formData: Record<string, unknown>): CreateCarDTO {
-  const location = formData.location_id as {
-    latitude: number;
-    longitude: number;
-  } | null;
-
   return {
     car_model_id: formData.car_model_id as number,
     plate_number: formData.plate_number as string,
@@ -84,8 +79,7 @@ function toCreateCarDTO(formData: Record<string, unknown>): CreateCarDTO {
     number_of_luggage: formData.number_of_luggage as number,
     is_professional_owner: formData.is_professional_owner as boolean,
     feature_ids: formData.feature_ids as number[],
-    latitude: location?.latitude ?? 0,
-    longitude: location?.longitude ?? 0,
+    rent_car_location_id: formData.location_id as number,
     about: (formData.about as string) || "",
   };
 }
@@ -135,6 +129,10 @@ export const carApiService = {
     const payload = {
       ...data,
       userId: appUserId,
+      location: {
+        latitude: "0",
+        longitude: "0",
+      },
     };
 
     const response = await api.post(API_BASE.create, payload);
@@ -154,6 +152,10 @@ export const carApiService = {
     const payload = {
       ...data,
       userId: appUserId,
+      location: {
+        latitude: "0",
+        longitude: "0",
+      },
     };
 
     await api.put(resolveEndpoint(API_BASE.update!, carId), payload);
@@ -214,15 +216,7 @@ export const carApiService = {
       is_professional_owner: data.is_professional_owner,
       feature_ids: featureIds,
       location_id:
-        data.location?.latitude != null
-          ? {
-              place_id: data.location?.place_id ?? "",
-              name: data.location?.name ?? "",
-              formatted_address: data.location?.formatted_address ?? "",
-              latitude: data.location.latitude,
-              longitude: data.location.longitude,
-            }
-          : null,
+        data.rent_car_location_id ?? data.location_id ?? data.location?.id,
       about: data.about,
       pricing: {
         low_price: pricingData.low_price,
@@ -245,8 +239,7 @@ export const carApiService = {
           toDateOnly(calendarData.endDate) ??
           null,
         unavailable_reason:
-          calendarData.car_unavailable_reason ??
-          calendarData.unavailable_reason,
+          calendarData.car_unavailable_reason ?? calendarData.unavailable_reason,
       },
       terms: data.terms || [],
       images: [],

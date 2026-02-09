@@ -7,8 +7,6 @@ import type {
   CompanyResource,
   LoginRequest,
   RegisterRequest,
-  RegisterRequest,
-  UserRegisterRequest,
   UserResource,
 } from "./api";
 
@@ -18,7 +16,6 @@ export type Company = CompanyResource;
 
 export type LoginDto = LoginRequest;
 export type RegisterDto = RegisterRequest;
-export type UserRegisterDto = UserRegisterRequest;
 
 export interface LoginResponse extends AuthResponse {}
 export type { AuthResponseData };

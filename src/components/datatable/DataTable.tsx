@@ -11,10 +11,10 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 
+import { FilterModal } from "@/components/filter-modal";
 import Checkbox from "@/components/form/input/checkbox";
 import {
   DynamicFilterModal,
-  type DynamicFilterModalProps,
   type FilterState,
   getFilterConfig,
 } from "@/features/filter-modal";
@@ -93,8 +93,6 @@ interface DataTableProps<T extends Record<string, any>> {
   filterServiceType?: CompanyType;
   onFilterApply?: (filters: FilterState) => void;
   onFilterClear?: () => void;
-  filterPreviewQueryFn?: DynamicFilterModalProps["previewQueryFn"];
-  filterPreviewQueryKey?: DynamicFilterModalProps["previewQueryKey"];
 }
 
 export function DataTable<T extends Record<string, any>>({
@@ -113,8 +111,6 @@ export function DataTable<T extends Record<string, any>>({
   filterServiceType,
   onFilterApply,
   onFilterClear,
-  filterPreviewQueryFn,
-  filterPreviewQueryKey,
 }: DataTableProps<T>) {
   const [sortingState, setSortingState] = useState<SortingState>([]);
   const [isFilterOpen, setFilterOpen] = useState(false);
@@ -291,34 +287,38 @@ export function DataTable<T extends Record<string, any>>({
         />
       )}
 
-      {toolbar?.showFilter && filterServiceType ? (
-        <DynamicFilterModal
-          isOpen={isFilterOpen}
-          onClose={() => setFilterOpen(false)}
-          serviceType={filterServiceType}
-          previewQueryFn={filterPreviewQueryFn}
-          previewQueryKey={filterPreviewQueryKey}
-          onApply={(filters) => {
-            // Calculate active filter count
-            const config = getFilterConfig(filterServiceType);
-            const defaults = config.defaultValues;
-            let count = 0;
-            for (const [key, value] of Object.entries(filters)) {
-              const defaultValue = defaults[key];
-              if (value !== defaultValue && value !== null && value !== "") {
-                count++;
+      {toolbar?.showFilter &&
+        (filterServiceType ? (
+          <DynamicFilterModal
+            isOpen={isFilterOpen}
+            onClose={() => setFilterOpen(false)}
+            serviceType={filterServiceType}
+            onApply={(filters) => {
+              // Calculate active filter count
+              const config = getFilterConfig(filterServiceType);
+              const defaults = config.defaultValues;
+              let count = 0;
+              for (const [key, value] of Object.entries(filters)) {
+                const defaultValue = defaults[key];
+                if (value !== defaultValue && value !== null && value !== "") {
+                  count++;
+                }
               }
-            }
-            setActiveFilterCount(count);
-            onFilterApply?.(filters);
-            setFilterOpen(false);
-          }}
-          onClear={() => {
-            setActiveFilterCount(0);
-            onFilterClear?.();
-          }}
-        />
-      ) : null}
+              setActiveFilterCount(count);
+              onFilterApply?.(filters);
+              setFilterOpen(false);
+            }}
+            onClear={() => {
+              setActiveFilterCount(0);
+              onFilterClear?.();
+            }}
+          />
+        ) : (
+          <FilterModal
+            isOpen={isFilterOpen}
+            onClose={() => setFilterOpen(false)}
+          />
+        ))}
     </div>
   );
 }

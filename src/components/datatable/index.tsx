@@ -5,4 +5,4 @@ export { TableEmpty } from "./TableEmpty";
 export { TableLoading } from "./TableLoading";
 export { TablePagination } from "./TablePagination";
 export { TableToolbar } from "./TableToolbar";
-export type { Column, PaginationState, SortState } from "./types";
+export type { Column, PaginationState,SortState } from "./types";

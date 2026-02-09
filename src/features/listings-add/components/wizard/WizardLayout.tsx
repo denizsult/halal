@@ -5,13 +5,7 @@ import type { FieldErrors } from "react-hook-form";
 import { Link } from "react-router-dom";
 
 import { getListingConfig } from "../../config";
-import {
-  getCompletedSubStepIndex,
-  getSubStepIndex,
-  setSubStepIndex,
-  useWizardUiSnapshot,
-} from "../../state/wizard-ui.store";
-import type { FormStep, ServiceType } from "../../types";
+import type { FormStep,ServiceType } from "../../types";
 
 interface WizardLayoutProps {
   children: ReactNode;
@@ -21,7 +15,6 @@ interface WizardLayoutProps {
   formValues?: Record<string, unknown>;
   formErrors?: FieldErrors<Record<string, unknown>>;
   stepValidation?: boolean[];
-  sidebarContent?: ReactNode;
 }
 
 // Check if a field has a valid value
@@ -132,16 +125,13 @@ function StepItem({
   formErrors?: FieldErrors<Record<string, unknown>>;
   stepValidation?: boolean;
 }) {
-  useWizardUiSnapshot();
   const isActive = stepIndex === currentStep;
-  const isCompleted = Boolean(stepValidation) || stepIndex < currentStep;
-  const isClickable = isActive || Boolean(stepValidation);
+  const isCompleted = stepIndex < currentStep && (stepValidation ?? true);
+  const isClickable = stepIndex <= currentStep;
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === totalSteps - 1;
 
-  const hasSubSteps = Boolean(step.subSteps?.length);
-  const activeSubStepIndex = getSubStepIndex(step.id);
-  const maxCompletedSubStepIndex = getCompletedSubStepIndex(step.id);
+  // Count completed fields for this step
   const requiredFields = step.fields.filter((field) => field.required);
   const progressFields =
     requiredFields.length > 0 ? requiredFields : step.fields;
@@ -167,77 +157,37 @@ function StepItem({
       </div>
 
       {/* Right side: Content */}
-      <div className="flex-1 py-2">
-        <button
-          type="button"
-          onClick={() => isClickable && onStepClick(stepIndex)}
-          disabled={!isClickable}
-          className={`w-full text-left transition-all ${isClickable ? "cursor-pointer" : "cursor-not-allowed"}`}
+      <button
+        type="button"
+        onClick={() => isClickable && onStepClick(stepIndex)}
+        disabled={!isClickable}
+        className={`flex-1 text-left py-2 transition-all ${isClickable ? "cursor-pointer" : "cursor-not-allowed"}`}
+      >
+        <p
+          className={`text-xs font-medium tracking-wide mb-1.5 ${isActive ? "text-[#E4E4E4]" : "text-[#93B2B1]"}`}
         >
-          <p
-            className={`text-xs font-medium tracking-wide mb-1.5 ${isActive ? "text-[#E4E4E4]" : "text-[#93B2B1]"}`}
-          >
-            Step {stepIndex + 1}
-            {isActive && totalFields > 0 && (
-              <span className="ml-2 text-[#5D8B8A]">
-                ({completedFields}/{totalFields})
-              </span>
-            )}
-          </p>
+          Step {stepIndex + 1}
+          {isActive && totalFields > 0 && (
+            <span className="ml-2 text-[#5D8B8A]">
+              ({completedFields}/{totalFields})
+            </span>
+          )}
+        </p>
 
-          <h3
-            className={`text-base font-semibold tracking-wide mb-0.5 ${isActive ? "text-white" : "text-[#93B2B1]"}`}
-          >
-            {step.title}
-          </h3>
+        <h3
+          className={`text-base font-semibold tracking-wide mb-0.5 ${isActive ? "text-white" : "text-[#93B2B1]"}`}
+        >
+          {step.title}
+        </h3>
 
-          <p
-            className={`text-[10px] font-medium tracking-wide leading-relaxed ${isActive ? "text-[#E4E4E4]" : "text-[#93B2B1]"}`}
-          >
-            {step.description}
-          </p>
-        </button>
+        <p
+          className={`text-[10px] font-medium tracking-wide leading-relaxed ${isActive ? "text-[#E4E4E4]" : "text-[#93B2B1]"}`}
+        >
+          {step.description}
+        </p>
 
         {/* Sub-items for active step - shows completion status based on form values */}
-        {isActive && hasSubSteps && (
-          <div className="mt-3 space-y-2">
-            {step.subSteps?.map((subStep, subIndex) => {
-              const completed = subIndex <= maxCompletedSubStepIndex;
-              const canNavigate =
-                subIndex === 0 || subIndex <= maxCompletedSubStepIndex;
-              return (
-                <button
-                  key={subStep.id}
-                  type="button"
-                  onClick={() =>
-                    canNavigate && setSubStepIndex(step.id, subIndex)
-                  }
-                  disabled={!canNavigate}
-                  className={`flex items-center gap-2 text-left ${
-                    canNavigate
-                      ? subIndex === activeSubStepIndex
-                        ? "opacity-100"
-                        : "opacity-70 hover:opacity-100"
-                      : "opacity-50 cursor-not-allowed"
-                  }`}
-                >
-                  {completed ? (
-                    <CheckIcon className="w-4 h-4 text-white" />
-                  ) : (
-                    <PendingIcon className="w-4 h-4 text-[#5D8B8A]" />
-                  )}
-                  <span
-                    className={`text-xs font-medium ${completed ? "text-white" : "text-[#5D8B8A]"}`}
-                  >
-                    {subStep.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        )}
-
-        {isActive && !hasSubSteps && step.fields.length > 0 && (
+        {isActive && step.fields.length > 0 && (
           <div className="mt-3 space-y-2">
             {step.fields.slice(0, 5).map((field) => {
               const fieldError = formErrors
@@ -269,7 +219,7 @@ function StepItem({
             )}
           </div>
         )}
-      </div>
+      </button>
     </div>
   );
 }
@@ -342,16 +292,16 @@ export function WizardLayout({
   formValues = {},
   formErrors,
   stepValidation,
-  sidebarContent,
 }: WizardLayoutProps) {
   const config = getListingConfig(serviceType);
+
   return (
     <div className="min-h-screen flex">
       {/* Sidebar - Desktop */}
-      <aside className="hidden md:flex w-[438px] bg-[#1D4B4A] relative flex-col shrink-0 sticky top-0 h-screen overflow-y-auto">
+      <aside className="hidden md:flex w-[438px] bg-[#1D4B4A] relative flex-col shrink-0">
         <BackgroundWave />
 
-        <div className="relative z-10 flex flex-col min-h-full px-8 py-6">
+        <div className="relative z-10 flex flex-col h-full px-8 py-6 overflow-hidden">
           {/* Logo */}
           <Link to="/dashboard" className="block mb-6 shrink-0">
             <img
@@ -361,22 +311,21 @@ export function WizardLayout({
             />
           </Link>
 
-          {/* Steps */}
-          <div className="flex-1">
-            {sidebarContent ??
-              config.steps.map((step, index) => (
-                <StepItem
-                  key={step.id}
-                  step={step}
-                  stepIndex={index}
-                  currentStep={currentStep}
-                  totalSteps={config.steps.length}
-                  onStepClick={onStepClick}
-                  formValues={formValues}
-                  formErrors={formErrors}
-                  stepValidation={stepValidation?.[index]}
-                />
-              ))}
+          {/* Steps - Scrollable */}
+          <div className="flex-1 overflow-y-auto pr-2 -mr-2 min-h-0">
+            {config.steps.map((step, index) => (
+              <StepItem
+                key={step.id}
+                step={step}
+                stepIndex={index}
+                currentStep={currentStep}
+                totalSteps={config.steps.length}
+                onStepClick={onStepClick}
+                formValues={formValues}
+                formErrors={formErrors}
+                stepValidation={stepValidation?.[index]}
+              />
+            ))}
           </div>
 
           {/* Help section */}

@@ -16,21 +16,14 @@ interface FilterDateFieldProps {
   name: string;
   label: string;
   placeholder?: string;
-  presets?: Array<{ label: string; value: string }>;
-  presetField?: string;
 }
 
 export function FilterDateField({
   name,
   label,
   placeholder = "Select date",
-  presets,
-  presetField,
 }: FilterDateFieldProps) {
-  const { control, watch, setValue } = useFormContext();
-  const presetValue = presetField
-    ? (watch(presetField) as string | null)
-    : null;
+  const { control } = useFormContext();
 
   return (
     <div className="space-y-2">
@@ -69,32 +62,6 @@ export function FilterDateField({
           </Popover>
         )}
       />
-      {presets?.length && presetField ? (
-        <div className="flex flex-wrap gap-2">
-          {presets.map((option) => {
-            const selected = presetValue === option.value;
-            return (
-              <button
-                key={option.value}
-                type="button"
-                className={`rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200 ease-in-out ${
-                  selected
-                    ? "bg-brand-50 text-brand-700 border-brand-200"
-                    : "bg-white text-gray-500 border-gray-200 hover:bg-gray-50"
-                }`}
-                onClick={() =>
-                  setValue(presetField, selected ? "" : option.value, {
-                    shouldDirty: true,
-                    shouldTouch: true,
-                  })
-                }
-              >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
     </div>
   );
 }

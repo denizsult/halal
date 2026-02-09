@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo } from "react";
-import { Controller, useFormContext, useWatch } from "react-hook-form";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Controller,useFormContext } from "react-hook-form";
 
 interface FileFieldProps {
   name: string;
@@ -42,12 +42,13 @@ export function FileField({
     watch,
   } = useFormContext();
   const error = errors[name]?.message as string | undefined;
-  const watchedValue = useWatch({ control, name });
+  const [previews, setPreviews] = useState<string[]>([]);
 
   const existingFiles = existingKey
     ? (watch(existingKey) as ExistingFile[] | undefined)
     : undefined;
-  const resolvedExistingLabel = existingLabel ?? `${label} (Existing)`;
+  const resolvedExistingLabel =
+    existingLabel ?? `${label} (Existing)`;
   const existingPreviews = useMemo(
     () =>
       (existingFiles ?? [])
@@ -61,25 +62,12 @@ export function FileField({
     [existingFiles]
   );
 
-  const filesFromValue: File[] = useMemo(() => {
-    if (multiple) {
-      return Array.isArray(watchedValue)
-        ? (watchedValue.filter((file) => file instanceof File) as File[])
-        : [];
-    }
-    return watchedValue instanceof File ? [watchedValue] : [];
-  }, [multiple, watchedValue]);
-
-  const previewUrls = useMemo(
-    () => filesFromValue.map((file) => URL.createObjectURL(file)),
-    [filesFromValue]
-  );
-
+  // Cleanup preview URLs on unmount
   useEffect(() => {
     return () => {
-      previewUrls.forEach((url) => URL.revokeObjectURL(url));
+      previews.forEach((url) => URL.revokeObjectURL(url));
     };
-  }, [previewUrls]);
+  }, [previews]);
 
   const handleFilesChange = useCallback(
     (
@@ -91,9 +79,16 @@ export function FileField({
         ? [...currentFiles, ...files].slice(0, maxFiles)
         : files.slice(0, 1);
 
+      // Revoke old URLs
+      previews.forEach((url) => URL.revokeObjectURL(url));
+
+      // Create new preview URLs
+      const newPreviews = newFiles.map((file) => URL.createObjectURL(file));
+      setPreviews(newPreviews);
+
       onChange(newFiles);
     },
-    [multiple, maxFiles]
+    [multiple, maxFiles, previews]
   );
 
   const handleRemove = useCallback(
@@ -103,10 +98,14 @@ export function FileField({
       onChange: (files: File[]) => void
     ) => {
       // Revoke the URL for the removed file
+      URL.revokeObjectURL(previews[index]);
+
       const newFiles = currentFiles.filter((_, i) => i !== index);
+      const newPreviews = previews.filter((_, i) => i !== index);
+      setPreviews(newPreviews);
       onChange(newFiles);
     },
-    []
+    [previews]
   );
 
   return (
@@ -141,15 +140,9 @@ export function FileField({
       <Controller
         name={name}
         control={control}
-        defaultValue={multiple ? [] : null}
+        defaultValue={[]}
         render={({ field }) => {
-          const files: File[] = multiple
-            ? (field.value as File[]) || []
-            : field.value
-              ? [field.value as File]
-              : [];
-          const hasSingleFile = !multiple && files.length > 0;
-          const selectedCount = files.length;
+          const files: File[] = field.value || [];
 
           return (
             <div className="space-y-4">
@@ -170,18 +163,10 @@ export function FileField({
                   type="file"
                   accept={accept}
                   multiple={multiple}
-                  disabled={
-                    disabled ||
-                    (multiple ? files.length >= maxFiles : hasSingleFile)
-                  }
+                  disabled={disabled || files.length >= maxFiles}
                   onChange={(e) => {
                     const selectedFiles = Array.from(e.target.files || []);
-                    if (multiple) {
-                      handleFilesChange(selectedFiles, files, field.onChange);
-                    } else {
-                      const nextFile = selectedFiles[0] ?? null;
-                      field.onChange(nextFile);
-                    }
+                    handleFilesChange(selectedFiles, files, field.onChange);
                     e.target.value = ""; // Reset input
                   }}
                   className="hidden"
@@ -200,8 +185,8 @@ export function FileField({
                   />
                 </svg>
                 <span className="text-sm text-gray-500">
-                  {selectedCount > 0
-                    ? `${selectedCount} file${selectedCount > 1 ? "s" : ""} selected`
+                  {files.length > 0
+                    ? `${files.length} file${files.length > 1 ? "s" : ""} selected`
                     : "Click to upload"}
                 </span>
                 {multiple && (
@@ -212,9 +197,9 @@ export function FileField({
               </label>
 
               {/* Preview Grid */}
-              {previewUrls.length > 0 && (
+              {previews.length > 0 && (
                 <div className="grid grid-cols-4 gap-3">
-                  {previewUrls.map((preview, index) => (
+                  {previews.map((preview, index) => (
                     <div key={preview} className="relative group">
                       <div className="aspect-square rounded-lg overflow-hidden bg-gray-100">
                         <img
@@ -226,11 +211,7 @@ export function FileField({
                       <button
                         type="button"
                         onClick={() =>
-                          multiple
-                            ? handleRemove(index, files, field.onChange)
-                            : (() => {
-                                field.onChange(null);
-                              })()
+                          handleRemove(index, files, field.onChange)
                         }
                         className="
                           absolute -top-2 -right-2 w-6 h-6

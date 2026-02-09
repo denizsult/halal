@@ -12,10 +12,7 @@ import type { ServiceType } from "../listings-add/types";
 export default function ListingsEditPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuthStore();
-  const [initialData, setInitialData] = useState<Record<
-    string,
-    unknown
-  > | null>(null);
+  const [initialData, setInitialData] = useState<Record<string, unknown> | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 

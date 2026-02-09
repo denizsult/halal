@@ -1,28 +1,17 @@
-import { useCallback, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Plus } from "lucide-react";
 
 import { DataTable } from "@/components/datatable/DataTable";
 import { StatsBlock } from "@/components/stats-block";
-import { DraftDialog } from "@/components/draft-dialog";
 import { Button } from "@/components/ui/button";
 import { RenderIf } from "@/components/ui/render-if";
-import { type FilterState, hasFilterConfig } from "@/features/filter-modal";
-import {
-  clearListingDraft,
-  getListingDraftStorageKeyForService,
-  hasListingDraft,
-} from "@/features/listings-add/draft";
-import { clearWizardUiState } from "@/features/listings-add/state/wizard-ui.store";
-import {
-  isListingServiceType,
-  type ServiceType,
-} from "@/features/listings-add/types";
+import { type FilterState,hasFilterConfig } from "@/features/filter-modal";
 import { getModuleListingsConfig } from "@/module-configs";
 import { useAuthStore } from "@/stores/auth.store";
 import type { CompanyType } from "@/types/api";
 
-import { getListings, useListings } from "./api";
+import { useListings } from "./api";
 import { getListingsTableColumns } from "./configs";
 import type { ListingsView } from "./types";
 
@@ -69,7 +58,6 @@ const getRowSearchText = (row: Record<string, unknown>) => {
 
 export default function ListingsPage() {
   const { user } = useAuthStore();
-  const navigate = useNavigate();
   const companyType = user?.company?.type as CompanyType | undefined;
   const hasListingsConfig = !!getModuleListingsConfig(companyType);
   const listingsLabel = getListingsLabel(companyType);
@@ -79,14 +67,14 @@ export default function ListingsPage() {
   const [pageSize, setPageSize] = useState(10);
   const [activeView, setActiveView] = useState<ListingsView>("listings");
   const [filters, setFilters] = useState<FilterState>({});
-  const [showDraftDialog, setShowDraftDialog] = useState(false);
 
   // Check if filter config exists for this company type
   const hasFilters = companyType ? hasFilterConfig(companyType) : false;
 
-  const normalizeFilters = useCallback((values: FilterState) => {
+  // Clean filter values - remove null, empty strings, and default sort values
+  const cleanedFilters = useMemo(() => {
     const cleaned: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(values)) {
+    for (const [key, value] of Object.entries(filters)) {
       // Skip null, undefined, empty strings
       if (value === null || value === undefined || value === "") continue;
       // Skip default sort values (they're handled separately)
@@ -95,13 +83,7 @@ export default function ListingsPage() {
       cleaned[key] = value;
     }
     return cleaned;
-  }, []);
-
-  // Clean filter values - remove null, empty strings, and default sort values
-  const cleanedFilters = useMemo(
-    () => normalizeFilters(filters),
-    [filters, normalizeFilters]
-  );
+  }, [filters]);
 
   const handleFilterApply = (newFilters: FilterState) => {
     setFilters(newFilters);
@@ -117,36 +99,6 @@ export default function ListingsPage() {
     if (view === activeView) return;
     setActiveView(view);
     setPage(1);
-  };
-
-  const handleAddListing = () => {
-    if (companyType && isListingServiceType(companyType as ServiceType)) {
-      const storageKey = getListingDraftStorageKeyForService(
-        companyType as ServiceType
-      );
-      if (hasListingDraft(storageKey)) {
-        setShowDraftDialog(true);
-        return;
-      }
-    }
-    navigate("/listings/add");
-  };
-
-  const handleContinueDraft = () => {
-    setShowDraftDialog(false);
-    navigate("/listings/add");
-  };
-
-  const handleStartFresh = () => {
-    if (companyType && isListingServiceType(companyType as ServiceType)) {
-      const storageKey = getListingDraftStorageKeyForService(
-        companyType as ServiceType
-      );
-      clearListingDraft(storageKey);
-      clearWizardUiState(storageKey);
-    }
-    setShowDraftDialog(false);
-    navigate("/listings/add");
   };
 
   const { data, isLoading } = useListings({
@@ -181,26 +133,6 @@ export default function ListingsPage() {
     });
   }, [rows, searchQuery]);
 
-  const previewQueryFn = useCallback(
-    async (values: FilterState, signal?: AbortSignal) => {
-      if (!companyType) return { count: 0 };
-      const preview = await getListings(
-        companyType,
-        {
-          page: 1,
-          limit: 1,
-          sortBy: "created_at",
-          sortOrder: "desc",
-          ...normalizeFilters(values),
-        },
-        activeView,
-        signal
-      );
-      return { count: preview.meta?.total ?? 0 };
-    },
-    [companyType, activeView, normalizeFilters]
-  );
-
   const meta = data?.meta;
   const totalItems = meta?.total ?? 0;
   const totalPages = meta?.last_page ?? 1;
@@ -223,22 +155,11 @@ export default function ListingsPage() {
           </p>
         </div>
         <RenderIf condition={hasListingsConfig}>
-          <Button
-            leftIcon={<Plus className="h-4 w-4 mr-2" />}
-            size="md"
-            onClick={handleAddListing}
-          >
-            Add New Listing
+          <Button leftIcon={<Plus className="h-4 w-4 mr-2" />} size="md">
+            <Link to="/listings/add">Add New Listing</Link>
           </Button>
         </RenderIf>
       </div>
-
-      <DraftDialog
-        open={showDraftDialog}
-        onOpenChange={setShowDraftDialog}
-        onContinue={handleContinueDraft}
-        onStartFresh={handleStartFresh}
-      />
 
       <div className="w-full overflow-x-auto pb-4 lg:pb-0">
         <div className="min-w-[800px] rounded-[12px] bg-gray-50 border-2 border-gray-100 p-8">
@@ -299,7 +220,6 @@ export default function ListingsPage() {
             filterServiceType={hasFilters ? companyType : undefined}
             onFilterApply={handleFilterApply}
             onFilterClear={handleFilterClear}
-            filterPreviewQueryFn={hasFilters ? previewQueryFn : undefined}
           />
         </div>
       </RenderIf>

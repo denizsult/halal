@@ -71,12 +71,6 @@ export interface FormField {
   };
 }
 
-export interface StepSubItem {
-  id: string;
-  label: string;
-  fields?: string[];
-}
-
 // Step submit actions
 export type StepSubmitAction =
   | "create"
@@ -87,8 +81,7 @@ export type StepSubmitAction =
   | "updateService"
   | "updateDriver"
   | "updateExtras"
-  | "update"
-  | "updateInformations";
+  | "update";
 
 // Step definition
 export interface FormStep {
@@ -97,8 +90,6 @@ export interface FormStep {
   description: string;
   fields: FormField[];
   infoAlert?: string;
-  customComponent?: string;
-  subSteps?: StepSubItem[];
   submitAction?: StepSubmitAction;
   toast?: {
     success?: string;
@@ -123,7 +114,6 @@ export interface ApiEndpoints {
   updateService?: string;
   updateDriver?: string;
   updateExtras?: string;
-  updateInformations?: string;
 }
 
 // Complete listing config
@@ -132,7 +122,6 @@ export interface ListingConfig {
   displayName: string;
   steps: FormStep[];
   apiEndpoints: ApiEndpoints;
-  useOverviewBetweenSteps?: boolean;
 }
 
 // Wizard status

@@ -4,7 +4,6 @@ import {
   CompanyServicesLazy,
   CompanySignUpLazy,
   SignInLazy,
-  UserSignUpLazy,
 } from "./lazy-components/auth.lazy";
 
 export const authRoutes = [
@@ -15,10 +14,6 @@ export const authRoutes = [
   {
     path: "/account-type",
     element: <AccountTypeLazy />,
-  },
-  {
-    path: "/sign-up/user",
-    element: <UserSignUpLazy />,
   },
   {
     path: "/sign-up/company",

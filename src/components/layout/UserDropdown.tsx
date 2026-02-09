@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Building, LogOut, Settings, User } from "lucide-react";
+import { HelpCircle, LogOut,Settings, User } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -39,7 +39,7 @@ export default function UserDropdown() {
       <DropdownMenuTrigger asChild>
         <button className="flex items-center gap-2 text-gray-700 dark:text-gray-400 outline-none">
           <Avatar className="bg-brand-500">
-            <AvatarImage src={user?.profile_photo_url ?? ""} alt={user?.name} />
+            <AvatarImage src="" alt={user?.name} />
             <AvatarFallback className="bg-brand-500 text-white">
               {getInitials(user?.name)}
             </AvatarFallback>
@@ -65,15 +65,15 @@ export default function UserDropdown() {
         <DropdownMenuGroup>
           <DropdownMenuItem onClick={() => navigate("/profile")}>
             <User className="mr-2 h-4 w-4" />
-            <span>Account Settings</span>
+            <span>Edit profile</span>
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate("/profile?tab=company")}>
-            <Building className="mr-2 h-4 w-4" />
-            <span>Company Settings</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => navigate("/profile?tab=security")}>
+          <DropdownMenuItem onClick={() => navigate("/profile")}>
             <Settings className="mr-2 h-4 w-4" />
-            <span>Security</span>
+            <span>Account settings</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => navigate("/profile")}>
+            <HelpCircle className="mr-2 h-4 w-4" />
+            <span>Support</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
 
