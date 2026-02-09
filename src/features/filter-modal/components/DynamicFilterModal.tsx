@@ -9,7 +9,7 @@ import { TopRightModal } from "@/components/ui/top-right-modal";
 import { useDynamicOptions } from "@/features/listings-add/hooks/useDynamicOptions";
 
 import { useFilterModal } from "../hooks/useFilterModal";
-import type { DynamicFilterModalProps, FilterSection } from "../types";
+import type { DynamicFilterModalProps } from "../types";
 
 import { FilterFieldRenderer } from "./FilterFieldRenderer";
 
@@ -139,7 +139,7 @@ export function DynamicFilterModal({
           <div className="space-y-6 px-2 py-4">
             {sections.map((section, index) => (
               <div
-                key={(section as FilterSection).id ?? `section-${index}`}
+                key={section.id ?? `section-${index}`}
                 className={
                   section.columns === 2 ? "grid grid-cols-2 gap-4" : "space-y-6"
                 }

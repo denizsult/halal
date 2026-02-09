@@ -56,9 +56,6 @@ export function SignInPage({ accountType }: SignInFormProps) {
       email_verified_at: null,
       is_active: true,
       company: {
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_active: true,
         id: 10,
         name: "Demo Hospital",
         slug: "demo-hospital",

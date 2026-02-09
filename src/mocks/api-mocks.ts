@@ -1,9 +1,4 @@
-import type {
-  AxiosAdapter,
-  AxiosRequestConfig,
-  AxiosResponse,
-  InternalAxiosRequestConfig,
-} from "axios";
+import type { AxiosAdapter, AxiosRequestConfig, AxiosResponse } from "axios";
 
 type MockResponse = {
   status: number;
@@ -56,7 +51,7 @@ const toAxiosResponse = (
   config: AxiosRequestConfig,
   response: MockResponse
 ): AxiosResponse => ({
-  config: config as InternalAxiosRequestConfig,
+  config: config as AxiosRequestConfig,
   data: response.data,
   status: response.status,
   statusText: response.status === 200 ? "OK" : "Mocked",

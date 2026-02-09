@@ -3,6 +3,7 @@ import type { CompanyType } from "@/types/api";
 import type { FilterConfig } from "../types";
 
 import { activityFilterConfig } from "./activity.filter.config";
+import { bookingsFilterConfig } from "./bookings.filter.config";
 import { eventFilterConfig } from "./event.filter.config";
 import { flightFilterConfig } from "./flight.filter.config";
 import { healthFilterConfig } from "./health.filter.config";

@@ -53,7 +53,7 @@ export function LocationSelect({
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedPlaceId, setSelectedPlaceId] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Debounce search input
   useEffect(() => {
